@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sputnik-2: Взлом Терминала</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #020202; /* Максимально глубокий черный */
+            overflow: hidden;
+            font-family: 'Courier New', Courier, monospace;
+            color: #ff8c00;
+        }
+
+        /* Космическо-матричный бэкграунд */
+        .background {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #050505 0%, #1a0a00 100%);
+            z-index: 1;
+        }
+
+        .stars {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                radial-gradient(1px 1px at 20px 30px, #ffaa00, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 40px 70px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 50px 160px, rgba(255,140,0,0.5), rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 130px 80px, #ff8c00, rgba(0,0,0,0));
+            background-repeat: repeat;
+            background-size: 200px 200px;
+            opacity: 0.3;
+            animation: moveStars 100s linear infinite;
+        }
+
+        @keyframes moveStars {
+            from { transform: translateY(0); }
+            to { transform: translateY(-200px); }
+        }
+
+        /* SVG Ракеты на фоне */
+        .rocket {
+            position: absolute;
+            opacity: 0.1;
+            transform: rotate(45deg);
+        }
+
+        .rocket-1 {
+            top: 10%; right: 15%; width: 150px;
+            animation: float 10s ease-in-out infinite;
+        }
+
+        .rocket-2 {
+            bottom: 20%; left: 10%; width: 250px;
+            opacity: 0.05;
+            animation: float 15s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) rotate(45deg); }
+            50% { transform: translate(-20px, -20px) rotate(45deg); }
+            100% { transform: translate(0, 0) rotate(45deg); }
+        }
+
+        /* Логотипы ГУАП */
+        .guap-logos {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            opacity: 0.8;
+            filter: drop-shadow(0 0 10px rgba(255, 140, 0, 0.5));
+        }
+
+        .guap-logos img {
+            max-height: 60px;
+            object-fit: contain;
+        }
+
+        /* Сканирующая линия */
+        .scanline {
+            width: 100%; height: 2px;
+            z-index: 25; position: absolute; pointer-events: none;
+            background: rgba(255, 140, 0, 0.2);
+            animation: scanline 4s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(-10px); }
+            100% { transform: translateY(100vh); }
+        }
+
+        /* UI Терминала */
+        #terminal-window {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px; max-width: 90%;
+            height: 500px; max-height: 80vh;
+            border: 1px solid rgba(255, 140, 0, 0.4);
+            border-radius: 8px;
+            background: rgba(10, 5, 0, 0.85);
+            box-shadow: 0 0 30px rgba(255, 140, 0, 0.15), inset 0 0 20px rgba(255, 140, 0, 0.05);
+            z-index: 15;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            backdrop-filter: blur(5px);
+            transition: all 1.5s ease-out;
+        }
+
+        .terminal-header {
+            height: 30px;
+            background: rgba(255, 140, 0, 0.2);
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            border-bottom: 1px solid rgba(255, 140, 0, 0.4);
+        }
+
+        .terminal-buttons {
+            display: flex; gap: 8px;
+        }
+
+        .btn {
+            width: 12px; height: 12px; border-radius: 50%;
+        }
+        .btn-r { background: #ff4a4a; }
+        .btn-y { background: #ffaa00; }
+        .btn-g { background: #4caf50; }
+
+        .terminal-title {
+            margin: 0 auto;
+            color: #ffaa00;
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+
+        #terminal-body {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            font-size: 1.1rem;
+            line-height: 1.5;
+            text-shadow: 0 0 5px #ff8c00;
+        }
+
+        /* Кастомизация скроллбара */
+        #terminal-body::-webkit-scrollbar { width: 8px; }
+        #terminal-body::-webkit-scrollbar-track { background: rgba(0,0,0,0.5); }
+        #terminal-body::-webkit-scrollbar-thumb { background: rgba(255, 140, 0, 0.5); }
+
+        .log-line { margin: 2px 0; word-wrap: break-word; }
+        
+        .sys-warn { color: #ff3333; text-shadow: 0 0 8px #ff3333; font-weight: bold; }
+        .sys-ok { color: #4caf50; text-shadow: 0 0 8px #4caf50; }
+        .sys-hack { color: #ffaa00; font-weight: bold; }
+
+        .cursor {
+            display: inline-block; width: 10px; height: 1.1rem;
+            background-color: #ff8c00;
+            animation: blink 1s step-end infinite;
+            vertical-align: bottom;
+            margin-left: 2px;
+        }
+
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* Канвас для частицы */
+        #canvas {
+            display: block; width: 100%; height: 100%;
+            z-index: 10; position: absolute; top:0; left:0;
+            opacity: 0; pointer-events: none;
+            transition: opacity 2s ease-in;
+        }
+
+        /* Эффект глитча для завершения */
+        .glitch-effect {
+            animation: screenGlitch 0.5s ease-out forwards;
+        }
+
+        @keyframes screenGlitch {
+            0% { transform: translate(-50%, -50%) scale(1); filter: invert(0); }
+            20% { transform: translate(-52%, -48%) scale(1.05); filter: hue-rotate(90deg); }
+            40% { transform: translate(-48%, -52%) scale(0.95); filter: contrast(1.5); }
+            60% { transform: translate(-50%, -50%) scale(1.1); filter: invert(1); }
+            80% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            100% { opacity: 0; display: none; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="background">
+        <div class="stars"></div>
+        <svg class="rocket rocket-1" viewBox="0 0 24 24" fill="none" stroke="rgba(255, 140, 0, 0.4)" stroke-width="0.5">
+            <path d="M12 2L12 2C13.2 5 16 8 19 8H19L21 16L19 16C16 16 13 18 13 21V22H11V21C11 18 8 16 5 16L3 16L5 8H5C8 8 10.8 5 12 2Z"></path>
+            <path d="M10 22C10 24 14 24 14 22"></path>
+            <circle cx="12" cy="11" r="2"></circle>
+        </svg>
+        <svg class="rocket rocket-2" viewBox="0 0 24 24" fill="none" stroke="rgba(255, 140, 0, 0.3)" stroke-width="0.5">
+            <path d="M12 2L12 2C13.2 5 16 8 19 8H19L21 16L19 16C16 16 13 18 13 21V22H11V21C11 18 8 16 5 16L3 16L5 8H5C8 8 10.8 5 12 2Z"></path>
+            <circle cx="12" cy="11" r="2"></circle>
+        </svg>
+    </div>
+
+    <div class="guap-logos">
+        <img src="3afbb54be607087ec719353776ea4333.png" alt="GUAP Logo" />
+    </div>
+
+    <div class="scanline"></div>
+
+    <div id="terminal-window">
+        <div class="terminal-header">
+            <div class="terminal-buttons">
+                <div class="btn btn-r"></div>
+                <div class="btn btn-y"></div>
+                <div class="btn btn-g"></div>
+            </div>
+            <div class="terminal-title">UG-1_CONNECTION_UPLINK</div>
+        </div>
+        <div id="terminal-body">
+            <div id="logs"></div>
+        </div>
+    </div>
+    
+    <canvas id="canvas"></canvas>
+
+    <script>
+        // --- ЧАСТЬ 1: ТЕРМИНАЛ И ПЕЧАТЬ ---
+        const terminalLogs = document.getElementById('logs');
+        const terminalBody = document.getElementById('terminal-body');
+        const terminalWindow = document.getElementById('terminal-window');
+        
+        // Сценарий вывода с классами 
+        const sequence = [
+            { text: "ESTABLISHING CONNECTION WITH SATELLITE 'SPUTNIK-2'...", delay: 200 },
+            { text: "Connecting [##########] 100%", class: "sys-ok", delay: 100 },
+            { text: "root@sputnik2:~# auth --uplink UG-1", delay: 150 },
+            { text: "Authenticating ID [UG-1]...", delay: 300 },
+            { text: "< ACCESS GRANTED. WELCOME OVERSEER. >", class: "sys-ok", delay: 200 },
+            { text: "root@sputnik2:~# load_mission_protocol --mission 'GUAP_85'", delay: 150 },
+            { text: "[INFO] Parsing 'GUAP_85' instructions container.", delay: 50 },
+            { text: "extracting: waypoints.dat", delay: 20 },
+            { text: "extracting: congratulation_matrix.bin", delay: 20 },
+            { text: "Loading decryption keys...", delay: 100 },
+            { text: "[ERROR] MODULE LOCKED: Congratulation payload is encrypted.", class: "sys-warn", delay: 400 },
+            { text: "root@sputnik2:~# force_bypass -t 72h", delay: 150 },
+            { text: "Attempting brute-force on sector 4...", delay: 300 },
+            { text: "BYPASS FAILED. PERMISSION DENIED.", class: "sys-warn", delay: 100 },
+            { text: "SYSTEM WARNING: UNAUTHORIZED INTERFACE MANIPULATION DETECTED!", class: "sys-warn", delay: 800 },
+            { text: "root@sputnik2:~# hack_terminal_node && execute_character_gen 0x042F", class: "sys-hack", delay: 200 },
+            { text: "Injecting memory payload [0x042F_CYR_YA]...", delay: 50 },
+            { text: "COMPILING CHARACTERS...", class: "sys-hack", delay: 300 },
+            { text: "HACK SUCCESSFUL. ISOLATING SYMBOL.", class: "sys-ok", delay: 400 },
+            { text: "> ИНИЦИАЛИЗАЦИЯ ПОСТРОЕНИЯ БУКВЫ 'Я'...", class: "sys-hack", delay: 1000 }
+        ];
+
+        let seqIndex = 0;
+        let charIndex = 0;
+        let pElement = null;
+
+        function typeLine() {
+            if (seqIndex < sequence.length) {
+                let currentItem = sequence[seqIndex];
+                
+                if (charIndex === 0) {
+                    pElement = document.createElement('div');
+                    pElement.className = 'log-line';
+                    if (currentItem.class) pElement.classList.add(currentItem.class);
+                    terminalLogs.appendChild(pElement);
+                }
+
+                pElement.innerHTML = currentItem.text.substring(0, charIndex + 1) + '<span class="cursor"></span>';
+                charIndex++;
+                terminalBody.scrollTop = terminalBody.scrollHeight;
+
+                // Увеличенная скорость печати (меньший delay)
+                let typeDelay = Math.random() * 15 + 5; 
+                
+                if (charIndex === currentItem.text.length) {
+                    pElement.innerHTML = currentItem.text; // Убираем курсор
+                    seqIndex++;
+                    charIndex = 0;
+                    setTimeout(typeLine, currentItem.delay || 100);
+                } else {
+                    setTimeout(typeLine, typeDelay);
+                }
+            } else {
+                // Конец терминальной секции -> Взлом -> Анимация буквы
+                setTimeout(() => {
+                    terminalWindow.classList.add('glitch-effect');
+                    setTimeout(() => {
+                        terminalWindow.style.display = 'none';
+                        startParticles();
+                    }, 500);
+                }, 1000);
+            }
+        }
+
+        setTimeout(typeLine, 1000);
+
+
+        // --- ЧАСТЬ 2: АНИМАЦИЯ БУКВЫ ---
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        
+        let width, height;
+        let particles = [];
+        let targetPoints = [];
+        let isAnimating = false;
+
+        const COLOR = '#ff8c00'; 
+        const GLOW_COLOR = 'rgba(255, 140, 0, 0.8)';
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            if (isAnimating) {
+                // targetPoints = getShapePoints();
+            }
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function getShapePoints() {
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+            tempCanvas.width = width;
+            tempCanvas.height = height;
+
+            let fontSize = Math.min(width, height) * 0.85;
+            tempCtx.fillStyle = '#fff';
+            // Используем системный моноширинный шрифт для хакерского вида
+            tempCtx.font = `bold ${fontSize}px Courier New, monospace`;
+            tempCtx.textAlign = 'center';
+            tempCtx.textBaseline = 'middle';
+            
+            tempCtx.fillText('Я', width / 2, height / 2);
+
+            const imageData = tempCtx.getImageData(0, 0, width, height).data;
+            const points = [];
+            
+            const gap = width < 800 ? 5 : 8; 
+
+            for (let y = 0; y < height; y += gap) {
+                for (let x = 0; x < width; x += gap) {
+                    const index = (y * width + x) * 4;
+                    const alpha = imageData[index + 3];
+                    
+                    if (alpha > 128) { 
+                        points.push({ x: x, y: y });
+                    }
+                }
+            }
+            return points;
+        }
+
+        class Particle {
+            constructor(targetX, targetY) {
+                this.targetX = targetX;
+                this.targetY = targetY;
+                
+                // Эффект появления "из экрана / терминала" - центр
+                this.x = width / 2 + (Math.random() - 0.5) * 200;
+                this.y = height / 2 + (Math.random() - 0.5) * 200;
+                
+                // Взрывной разлет перед сборкой
+                this.vx = (Math.random() - 0.5) * 40;
+                this.vy = (Math.random() - 0.5) * 40;
+
+                this.radius = Math.random() * 2 + 1;
+                this.friction = Math.random() * 0.04 + 0.88; 
+                this.ease = Math.random() * 0.05 + 0.015;
+                
+                this.glitchTimer = Math.random() * 50;
+            }
+
+            update() {
+                let dx = this.targetX - this.x;
+                let dy = this.targetY - this.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                
+                this.vx += dx * this.ease;
+                this.vy += dy * this.ease;
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Зависания/глитчи
+                this.glitchTimer--;
+                if (this.glitchTimer < 0 && dist < 30) {
+                    this.x += (Math.random() - 0.5) * 10;
+                    this.y += (Math.random() - 0.5) * 10;
+                    this.glitchTimer = Math.random() * 150 + 20;
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = COLOR;
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = GLOW_COLOR;
+                ctx.fill();
+            }
+        }
+
+        function startParticles() {
+            canvas.style.opacity = '1';
+            targetPoints = getShapePoints();
+            particles = [];
+            targetPoints.forEach(p => {
+                particles.push(new Particle(p.x, p.y));
+            });
+            isAnimating = true;
+            animateParticles();
+        }
+
+        function animateParticles() {
+            ctx.fillStyle = 'rgba(5, 5, 5, 0.3)';
+            ctx.fillRect(0, 0, width, height);
+
+            if (Math.random() > 0.95) {
+                ctx.fillStyle = 'rgba(255, 140, 0, 0.05)';
+                ctx.fillRect(Math.random() * width, Math.random() * height, Math.random() * 300, Math.random() * 10);
+            }
+
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            if (isAnimating) {
+                requestAnimationFrame(animateParticles);
+            }
+        }
+    </script>
+</body>
+</html>
