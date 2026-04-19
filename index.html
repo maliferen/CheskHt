@@ -40,11 +40,18 @@
 
         .fleet-sat-1 { width: 100px; top: 20%; left: -200px; animation: flyRight 30s linear infinite; }
         .fleet-sat-2 { width: 150px; top: 70%; right: -200px; transform: scaleX(-1); animation: flyLeft 40s linear infinite; }
+        .fleet-sat-3 { width: 120px; bottom: 5%; right: -200px; transform: scaleX(-1); animation: flyLeft 22s linear infinite 2s; }
         .fleet-roc-1 { width: 200px; bottom: -300px; left: 15%; transform: rotate(45deg); animation: flyDiag 20s linear infinite; }
         .fleet-roc-2 { width: 120px; bottom: -200px; right: 25%; transform: rotate(-45deg) scaleX(-1); animation: flyDiag2 25s linear infinite; }
+        .fleet-roc-3 { width: 160px; top: 35%; left: -200px; transform: rotate(15deg); animation: flyRight 35s linear infinite 5s; }
+        
+        .fleet-met-1 { width: 400px; top: 15%; left: -400px; animation: flyRightFast 10s linear infinite; }
+        .fleet-met-2 { width: 250px; bottom: 25%; right: -400px; transform: scaleX(-1); animation: flyLeftFast 14s linear infinite 6s; }
 
         @keyframes flyRight { to { transform: translate(120vw, -100px) rotate(15deg); } }
         @keyframes flyLeft { to { transform: translate(-120vw, 150px) rotate(-10deg) scaleX(-1); } }
+        @keyframes flyRightFast { to { transform: translate(120vw, 50px) rotate(5deg); } }
+        @keyframes flyLeftFast { to { transform: translate(-120vw, -80px) rotate(-5deg) scaleX(-1); } }
         @keyframes flyDiag { to { transform: translate(100vw, -120vh) rotate(45deg); } }
         @keyframes flyDiag2 { to { transform: translate(-100vw, -120vh) rotate(-45deg) scaleX(-1); } }
 
@@ -106,8 +113,9 @@
         }
         .terminal-logs {
             flex: 1; overflow-y: auto; font-size: 2.2rem; line-height: 1.5;
-            text-shadow: 0 0 4px #ff8c00;
+            text-shadow: 0 0 4px #ff8c00; scrollbar-width: none;
         }
+        .terminal-logs::-webkit-scrollbar { display: none; }
         
         /* Цвета логов */
         .sys-warn { color: #ff3333; text-shadow: 0 0 8px #ff3333; font-weight: bold; }
@@ -154,13 +162,33 @@
             opacity: 0; pointer-events: none; transition: opacity 1.5s ease-in;
         }
 
-        /* Глитч исчезновения интерфейса */
-        .glitch-out { animation: hideUI 0.8s ease forwards; }
-        @keyframes hideUI {
-            0% { transform: scale(1); filter: invert(0); opacity: 1; }
-            50% { transform: scale(1.02); filter: hue-rotate(90deg) contrast(1.5); opacity: 0.8; }
-            100% { transform: scale(0.9); opacity: 0; filter: invert(1); visibility: hidden; }
+        /* Экстремальный RGB Glitch для исчезновения окна */
+        .glitch-out { animation: extremeGlitch 1.2s cubic-bezier(.25, .46, .45, .94) forwards; }
+        @keyframes extremeGlitch {
+            0% { transform: scale(1); filter: drop-shadow(0 0 0 red); opacity: 1; }
+            10% { transform: scale(1.02) translate(15px, -15px) skewX(10deg); filter: drop-shadow(-20px 0 0 red) drop-shadow(20px 0 0 cyan); opacity: 0.9; }
+            20% { transform: scale(0.95) translate(-15px, 15px) skewX(-10deg); filter: drop-shadow(20px 0 0 blue) drop-shadow(-20px 0 0 green); opacity: 0.8; }
+            25% { transform: scale(1.05) translate(0, 0); filter: drop-shadow(0 0 0 #fff); }
+            40% { transform: translate(50px, 20px) scale(0.8); opacity: 0.5; filter: hue-rotate(90deg) contrast(2); }
+            50% { transform: translate(-30px, -20px) scale(0.4); opacity: 0.3; }
+            100% { transform: scale(0); opacity: 0; display: none; }
         }
+
+        /* Огромные высокотехнологичные кольца прицеливания (HUD) за буквой Я */
+        .hud-ring {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
+            border-radius: 50%; opacity: 0; pointer-events: none; z-index: 15;
+            transition: all 2.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .show-fleet .hud-ring { opacity: 0.15; }
+        .show-fleet .ring-1 { transform: translate(-50%, -50%) scale(1); animation: spinHud 15s linear infinite; }
+        .show-fleet .ring-2 { transform: translate(-50%, -50%) scale(1); animation: spinHudRev 25s linear infinite; }
+        
+        .ring-1 { width: 70vh; height: 70vh; border: 4px dashed #ff8c00; }
+        .ring-2 { width: 95vh; height: 95vh; border: 6px dotted #ffaa00; border-top: 8px solid transparent; border-bottom: 8px solid transparent; }
+        
+        @keyframes spinHud { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+        @keyframes spinHudRev { 100% { transform: translate(-50%, -50%) rotate(-360deg); } }
 
     </style>
 </head>
@@ -170,34 +198,46 @@
         <div class="stars"></div>
         
         <!-- Секретный космо-флот, который проявляется в конце -->
-        <!-- Спутник 1 -->
+        
+        <!-- --- МЕТЕОРИТЫ --- -->
+        <svg class="space-obj fleet-met-1" viewBox="0 0 100 50">
+            <line x1="5" y1="25" x2="85" y2="25" stroke="rgba(255, 140, 0, 0.5)" stroke-width="1.5" stroke-dasharray="10, 4, 3, 3" stroke-linecap="round"/>
+            <circle cx="90" cy="25" r="3" fill="#ffaa00" filter="drop-shadow(0 0 5px #ff8c00)"/>
+        </svg>
+        <svg class="space-obj fleet-met-2" viewBox="0 0 100 50">
+            <line x1="10" y1="25" x2="90" y2="25" stroke="rgba(255, 140, 0, 0.3)" stroke-width="1" stroke-dasharray="15, 5, 2, 8" stroke-linecap="round"/>
+            <circle cx="93" cy="25" r="2" fill="#ff8c00" filter="drop-shadow(0 0 3px #ffaa00)"/>
+        </svg>
+
+        <!-- --- СПУТНИКИ И РАКЕТЫ --- -->
         <svg class="space-obj fleet-sat-1" viewBox="0 0 24 24" fill="none" stroke="#ff8c00" stroke-width="0.5">
             <rect x="2" y="9" width="6" height="6"></rect>
             <rect x="16" y="9" width="6" height="6"></rect>
             <circle cx="12" cy="12" r="2"></circle>
             <line x1="8" y1="12" x2="16" y2="12"></line>
-            <path d="M12 10v-4"></path>
-            <path d="M10 4 c 1 -1, 3 -1, 4 0"></path>
+            <path d="M12 10v-4"></path><path d="M10 4 c 1 -1, 3 -1, 4 0"></path>
         </svg>
-
-        <!-- Спутник 2 -->
         <svg class="space-obj fleet-sat-2" viewBox="0 0 24 24" fill="none" stroke="#ffaa00" stroke-width="0.3">
             <rect x="3" y="10" width="4" height="4"></rect>
             <rect x="17" y="10" width="4" height="4"></rect>
             <circle cx="12" cy="12" r="3"></circle>
             <line x1="7" y1="12" x2="17" y2="12"></line>
-            <line x1="12" y1="9" x2="12" y2="5"></line>
-            <rect x="10" y="3" width="4" height="2"></rect>
+            <line x1="12" y1="9" x2="12" y2="5"></line><rect x="10" y="3" width="4" height="2"></rect>
+        </svg>
+        <svg class="space-obj fleet-sat-3" viewBox="0 0 24 24" fill="none" stroke="#ffaa00" stroke-width="0.4">
+            <polygon points="12,2 18,8 12,14 6,8"></polygon><circle cx="12" cy="18" r="2"></circle>
+            <line x1="12" y1="14" x2="12" y2="18"></line>
         </svg>
 
-        <!-- Ракета 1 -->
         <svg class="space-obj fleet-roc-1" viewBox="0 0 24 24" fill="none" stroke="#ff8c00" stroke-width="0.5">
             <path d="M12 2C13.2 5 16 8 19 8H19L21 16L19 16C16 16 13 18 13 21V22H11V21C11 18 8 16 5 16L3 16L5 8H5C8 8 10.8 5 12 2Z"></path>
             <path d="M10 22C10 24 14 24 14 22"></path><circle cx="12" cy="11" r="2"></circle>
         </svg>
-
-        <!-- Ракета 2 -->
         <svg class="space-obj fleet-roc-2" viewBox="0 0 24 24" fill="none" stroke="#ffaa00" stroke-width="0.3">
+            <path d="M12 2C13.2 5 16 8 19 8H19L21 16L19 16C16 16 13 18 13 21V22H11V21C11 18 8 16 5 16L3 16L5 8H5C8 8 10.8 5 12 2Z"></path>
+            <path d="M10 22C10 24 14 24 14 22"></path><circle cx="12" cy="11" r="2"></circle>
+        </svg>
+        <svg class="space-obj fleet-roc-3" viewBox="0 0 24 24" fill="none" stroke="#ffaa00" stroke-width="0.4">
             <path d="M12 2C13.2 5 16 8 19 8H19L21 16L19 16C16 16 13 18 13 21V22H11V21C11 18 8 16 5 16L3 16L5 8H5C8 8 10.8 5 12 2Z"></path>
             <path d="M10 22C10 24 14 24 14 22"></path><circle cx="12" cy="11" r="2"></circle>
         </svg>
@@ -274,6 +314,10 @@
 
     <canvas id="canvas"></canvas>
 
+    <!-- Огромные прицельные кольца HUD -->
+    <div class="hud-ring ring-1"></div>
+    <div class="hud-ring ring-2"></div>
+
     <script>
         // --- ЧАСТЬ 1: ТЕРМИНАЛ И ПАНЕЛИ ---
         const terminalLogs = document.getElementById('logs');
@@ -291,10 +335,7 @@
             { text: "root@sputnik2:~# load_mission --id 'GUAP_85_ANNIVERSARY'", delay: 50 },
             { text: "Locating package bounds... MATCH FOUND.", delay: 30 },
             { text: "Extracting [congratulation_protocol.bin]...", delay: 30 },
-            { text: "[█████               ] 25%", delay: 10 },
-            { text: "[██████████          ] 50%", delay: 10 },
-            { text: "[███████████████     ] 75%", delay: 10 },
-            { text: "[████████████████████] 100%", class: "sys-ok", delay: 30 },
+            { action: "loader", delay: 10 },
             { text: "root@sputnik2:~# unpack_symbol --hex 0x042F", delay: 100 },
             { text: "[ERROR] SYSTEM SECURED. ACCESS TO CORE LAYER PROHIBITED.", class: "sys-warn", delay: 150 },
             { text: "root@sputnik2:~# force_bypass -r -t 0s", delay: 80 },
@@ -308,6 +349,7 @@
 
         let seqIndex = 0;
         let charIndex = 0;
+        let loadingProgress = 0;
         let pElement = null;
 
         function updateResources() {
@@ -336,6 +378,39 @@
             if (seqIndex < sequence.length) {
                 let currentItem = sequence[seqIndex];
                 
+                // === Обработка динамического лоадера от 1 до 100% ===
+                if (currentItem.action === "loader") {
+                    if (loadingProgress === 0) {
+                        pElement = document.createElement('div');
+                        pElement.className = 'log-line sys-hack';
+                        terminalLogs.appendChild(pElement);
+                        bottomProcess.innerText = "running: ext [progress...]";
+                    }
+                    if (loadingProgress <= 100) {
+                        const blocks = Math.floor(loadingProgress / 5);
+                        const empty = 20 - blocks;
+                        const spin = ["|", "/", "-", "\\"][loadingProgress % 4];
+                        
+                        // Гарантированно фиксируем ширину процентов через невидимые нули (они в моноширинном шрифте идеальны по ширине)
+                        const pctStr = loadingProgress.toString();
+                        const hiddenZeros = 3 - pctStr.length;
+                        const pctFormatted = (hiddenZeros > 0 ? `<span style="opacity:0">${"0".repeat(hiddenZeros)}</span>` : "") + pctStr;
+                        
+                        pElement.innerHTML = `[<span style="color:#ff8c00">${"█".repeat(blocks)}</span><span style="opacity:0.3">${".".repeat(empty)}</span>] ${pctFormatted}% ${spin}`;
+                        terminalLogs.scrollTop = terminalLogs.scrollHeight;
+                        loadingProgress++;
+                        let speed = Math.random() > 0.9 ? 80 : currentItem.delay;
+                        setTimeout(typeLine, speed);
+                    } else {
+                        pElement.innerHTML = `[<span style="color:#4caf50">${"█".repeat(20)}</span>] 100% <span style="opacity:0">-</span>`;
+                        pElement.className = 'log-line sys-ok'; // Меняем цвет на успешный
+                        seqIndex++;
+                        loadingProgress = 0;
+                        setTimeout(typeLine, 100);
+                    }
+                    return;
+                }
+
                 if (charIndex === 0) {
                     pElement = document.createElement('div');
                     pElement.className = 'log-line';
@@ -399,7 +474,7 @@
 
             const imageData = tempCtx.getImageData(0, 0, width, height).data;
             const points = [];
-            // Увеличиваем шаг между частицами (меньше частиц = меньше лагов)
+            // Возвращаем старый более плотный шаг (старый стиль)
             const gap = width < 800 ? 8 : 12; 
 
             for (let y = 0; y < height; y += gap) {
@@ -441,7 +516,9 @@
 
                 this.glitchTimer--;
                 if (this.glitchTimer < 0 && dist < 30) {
-                    this.x += (Math.random() - 0.5) * 12; this.y += (Math.random() - 0.5) * 12;
+                    // Значительно уменьшаем прыганье (убрали излишнюю активность)
+                    this.x += (Math.random() - 0.5) * 3; 
+                    this.y += (Math.random() - 0.5) * 3;
                     this.glitchTimer = Math.random() * 80 + 10;
                 }
             }
@@ -458,15 +535,23 @@
             isAnimating = true; animateParticles();
         }
 
+        let animTime = 0;
+
         function animateParticles() {
-            ctx.fillStyle = 'rgba(2, 1, 1, 0.3)'; ctx.fillRect(0, 0, width, height);
+            animTime += 0.05;
+            ctx.clearRect(0, 0, width, height);
 
             if (Math.random() > 0.95) {
-                ctx.fillStyle = 'rgba(255, 140, 0, 0.06)';
+                ctx.fillStyle = 'rgba(255, 140, 0, 0.08)';
                 ctx.fillRect(Math.random() * width, Math.random() * height, Math.random() * 200, Math.random() * 10);
             }
 
-            particles.forEach(p => { p.update(); p.draw(); });
+            // Обновление и отрисовка атомов в классическом стиле только из точек
+            particles.forEach(p => { 
+                p.update(); 
+                p.draw(); 
+            });
+            
             if (isAnimating) requestAnimationFrame(animateParticles);
         }
     </script>
