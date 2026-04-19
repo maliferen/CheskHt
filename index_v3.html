@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sputnik-2: Улучшенный Терминал</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: #020101; 
+            overflow: hidden;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            color: #ff8c00;
+        }
+
+        /* Фоновые эффекты */
+        .background {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #050300 0%, #170800 100%);
+            z-index: 1; pointer-events: none;
+        }
+        .stars {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                radial-gradient(1px 1px at 20px 30px, #ffaa00, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 40px 70px, #ffffff, rgba(0,0,0,0));
+            background-repeat: repeat; background-size: 200px 200px;
+            opacity: 0.15; animation: moveStars 60s linear infinite;
+        }
+        @keyframes moveStars {
+            from { transform: translateY(0); }
+            to { transform: translateY(-200px); }
+        }
+
+        /* SVG Ракеты и Спутники для финала */
+        .space-obj { position: absolute; opacity: 0; transition: opacity 3s; pointer-events: none; }
+        .show-fleet .space-obj { opacity: 0.25; }
+
+        .fleet-sat-1 { width: 100px; top: 20%; left: -200px; animation: flyRight 30s linear infinite; }
+        .fleet-sat-2 { width: 150px; top: 70%; right: -200px; transform: scaleX(-1); animation: flyLeft 40s linear infinite; }
+        .fleet-roc-1 { width: 200px; bottom: -300px; left: 15%; transform: rotate(45deg); animation: flyDiag 20s linear infinite; }
+        .fleet-roc-2 { width: 120px; bottom: -200px; right: 25%; transform: rotate(-45deg) scaleX(-1); animation: flyDiag2 25s linear infinite; }
+
+        @keyframes flyRight { to { transform: translate(120vw, -100px) rotate(15deg); } }
+        @keyframes flyLeft { to { transform: translate(-120vw, 150px) rotate(-10deg) scaleX(-1); } }
+        @keyframes flyDiag { to { transform: translate(100vw, -120vh) rotate(45deg); } }
+        @keyframes flyDiag2 { to { transform: translate(-100vw, -120vh) rotate(-45deg) scaleX(-1); } }
+
+        .scanline {
+            width: 100%; height: 2px; z-index: 100; position: absolute; pointer-events: none;
+            background: rgba(255, 140, 0, 0.15); animation: scanline 4s linear infinite;
+        }
+        @keyframes scanline { 0% { transform: translateY(-10px); } 100% { transform: translateY(100vh); } }
+
+        /* ОБОЛОЧКА ИНТЕРФЕЙСА СЕТКИ */
+        .ui-grid {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10; display: flex; flex-direction: column;
+            box-sizing: border-box; padding: 10px;
+            pointer-events: none; transition: opacity 0.5s;
+        }
+
+        .frame-border {
+            position: absolute; top: 10px; left: 10px; right: 10px; bottom: 10px;
+            border: 1px solid rgba(255, 140, 0, 0.4); pointer-events: none; z-index: 11;
+            box-shadow: inset 0 0 30px rgba(255, 140, 0, 0.05);
+        }
+        
+        /* Угловые маркеры */
+        .corner { position: absolute; width: 20px; height: 20px; border: 2px solid #ff8c00; z-index: 12; }
+        .tl { top: 10px; left: 10px; border-right: none; border-bottom: none; }
+        .tr { top: 10px; right: 10px; border-left: none; border-bottom: none; }
+        .bl { bottom: 10px; left: 10px; border-right: none; border-top: none; }
+        .br { bottom: 10px; right: 10px; border-left: none; border-top: none; }
+
+        /* ВЕРХНЯЯ ПАНЕЛЬ */
+        .header-panel {
+            display: flex; justify-content: space-between; align-items: flex-end;
+            border-bottom: 1px solid rgba(255, 140, 0, 0.5);
+            padding: 5px 20px 10px 20px; background: rgba(255, 140, 0, 0.05);
+        }
+        .header-item { font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; }
+        .header-item span { color: #fff; font-weight: bold; }
+        .status-online { color: #4caf50 !important; animation: blinkStatus 2s infinite; }
+        @keyframes blinkStatus { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        /* ОСНОВНОЙ КОНТЕНТ */
+        .main-content {
+            display: flex; flex: 1; gap: 20px; padding: 20px; overflow: hidden;
+        }
+
+        /* ЛЕВАЯ ПАНЕЛЬ: ТЕРМИНАЛ */
+        .center-terminal {
+            flex: 1; border: 1px solid rgba(255,140,0,0.3); background: rgba(5,2,0,0.8);
+            border-radius: 4px; padding: 15px; position: relative; overflow: hidden;
+            display: flex; flex-direction: column;
+            box-shadow: 0 0 20px rgba(255, 140, 0, 0.1);
+        }
+        
+        .terminal-header-mini {
+            font-size: 0.9rem; border-bottom: 1px dashed rgba(255,140,0,0.4);
+            padding-bottom: 5px; margin-bottom: 10px; opacity: 0.8;
+            display: flex; justify-content: space-between;
+        }
+        .terminal-logs {
+            flex: 1; overflow-y: auto; font-size: 1.15rem; line-height: 1.4;
+            text-shadow: 0 0 4px #ff8c00;
+        }
+        
+        /* Цвета логов */
+        .sys-warn { color: #ff3333; text-shadow: 0 0 8px #ff3333; font-weight: bold; }
+        .sys-ok { color: #4caf50; }
+        .sys-hack { color: #ffaa00; font-weight: bold; font-style: italic; }
+        
+        .cursor {
+            display: inline-block; width: 10px; height: 1.15rem; background-color: #ff8c00;
+            animation: blinkCursor 0.5s step-end infinite; margin-left: 2px; vertical-align: bottom;
+        }
+        @keyframes blinkCursor { 50% { opacity: 0; } }
+
+        /* ПРАВАЯ ПАНЕЛЬ: ИНФО И РЕСУРСЫ */
+        .side-panel {
+            width: 320px; display: flex; flex-direction: column; gap: 20px;
+        }
+
+        .guap-target {
+            border: 1px solid rgba(255,140,0,0.4); background: rgba(255,140,0,0.05);
+            padding: 15px; text-align: center; position: relative;
+        }
+        .guap-target img { max-width: 180px; filter: drop-shadow(0 0 10px rgba(255,140,0,0.6)); }
+        .guap-overlay-text { font-size: 0.8rem; margin-top: 10px; opacity: 0.6; }
+
+        .system-resources {
+            flex: 1; border: 1px solid rgba(255,140,0,0.4); background: rgba(255,140,0,0.05);
+            padding: 15px; display: flex; flex-direction: column; gap: 15px; font-size: 0.9rem;
+        }
+        .resource-bar-container { margin-top: 5px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,140,0,0.3); height: 12px; position: relative; }
+        .resource-bar { height: 100%; background: #ff8c00; width: 0%; box-shadow: 0 0 10px #ff8c00; transition: width 0.2s;}
+        
+        /* НИЖНЯЯ ПАНЕЛЬ */
+        .footer-panel {
+            border-top: 1px solid rgba(255, 140, 0, 0.5); background: rgba(255, 140, 0, 0.05);
+            padding: 5px 20px; font-size: 0.85rem; display: flex; justify-content: space-between;
+            align-items: center; height: 25px;
+        }
+        .active-process { display: inline-block; overflow: hidden; white-space: nowrap; }
+
+        /* Канвас частицы */
+        #canvas {
+            display: block; width: 100%; height: 100%;
+            z-index: 20; position: absolute; top:0; left:0;
+            opacity: 0; pointer-events: none; transition: opacity 1.5s ease-in;
+        }
+
+        /* Глитч исчезновения интерфейса */
+        .glitch-out { animation: hideUI 0.8s ease forwards; }
+        @keyframes hideUI {
+            0% { transform: scale(1); filter: invert(0); opacity: 1; }
+            50% { transform: scale(1.02); filter: hue-rotate(90deg) contrast(1.5); opacity: 0.8; }
+            100% { transform: scale(0.9); opacity: 0; filter: invert(1); visibility: hidden; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="background" id="space-bg">
+        <div class="stars"></div>
+        
+        <!-- Секретный космо-флот, который проявляется в конце -->
+        <!-- Спутник 1 -->
+        <svg class="space-obj fleet-sat-1" viewBox="0 0 24 24" fill="none" stroke="#ff8c00" stroke-width="0.5">
+            <rect x="2" y="9" width="6" height="6"></rect>
+            <rect x="16" y="9" width="6" height="6"></rect>
+            <circle cx="12" cy="12" r="2"></circle>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+            <path d="M12 10v-4"></path>
+            <path d="M10 4 c 1 -1, 3 -1, 4 0"></path>
+        </svg>
+
+        <!-- Спутник 2 -->
+        <svg class="space-obj fleet-sat-2" viewBox="0 0 24 24" fill="none" stroke="#ffaa00" stroke-width="0.3">
+            <rect x="3" y="10" width="4" height="4"></rect>
+            <rect x="17" y="10" width="4" height="4"></rect>
+            <circle cx="12" cy="12" r="3"></circle>
+            <line x1="7" y1="12" x2="17" y2="12"></line>
+            <line x1="12" y1="9" x2="12" y2="5"></line>
+            <rect x="10" y="3" width="4" height="2"></rect>
+        </svg>
+
+        <!-- Ракета 1 -->
+        <svg class="space-obj fleet-roc-1" viewBox="0 0 24 24" fill="none" stroke="#ff8c00" stroke-width="0.5">
+            <path d="M12 2C13.2 5 16 8 19 8H19L21 16L19 16C16 16 13 18 13 21V22H11V21C11 18 8 16 5 16L3 16L5 8H5C8 8 10.8 5 12 2Z"></path>
+            <path d="M10 22C10 24 14 24 14 22"></path><circle cx="12" cy="11" r="2"></circle>
+        </svg>
+
+        <!-- Ракета 2 -->
+        <svg class="space-obj fleet-roc-2" viewBox="0 0 24 24" fill="none" stroke="#ffaa00" stroke-width="0.3">
+            <path d="M12 2C13.2 5 16 8 19 8H19L21 16L19 16C16 16 13 18 13 21V22H11V21C11 18 8 16 5 16L3 16L5 8H5C8 8 10.8 5 12 2Z"></path>
+            <path d="M10 22C10 24 14 24 14 22"></path><circle cx="12" cy="11" r="2"></circle>
+        </svg>
+    </div>
+
+    <div class="scanline"></div>
+
+    <div class="frame-border"></div>
+    <div class="corner tl"></div><div class="corner tr"></div>
+    <div class="corner bl"></div><div class="corner br"></div>
+
+    <div class="ui-grid" id="main-ui">
+        <!-- Верхушка -->
+        <div class="header-panel">
+            <div class="header-item">UPLINK: <span>SPUTNIK-2</span> [SECURE]</div>
+            <div class="header-item">USER: <span>UG-1_COMMANDER</span></div>
+            <div class="header-item">STATUS: <span class="status-online">ONLINE</span></div>
+        </div>
+
+        <!-- Центральная часть -->
+        <div class="main-content">
+            <!-- Терминал -->
+            <div class="center-terminal">
+                <div class="terminal-header-mini">
+                    <span>> CORE_EXECUTION_STREAM // PORT: 4492</span>
+                    <span>ENCRYPTION: AES-256</span>
+                </div>
+                <div class="terminal-logs" id="logs"></div>
+            </div>
+
+            <!-- Правая панель ресурсов и инфо -->
+            <div class="side-panel">
+                <div class="guap-target">
+                    <img src="3afbb54be607087ec719353776ea4333.png" alt="GUAP">
+                    <div class="guap-overlay-text">
+                        TARGET: GUAP ANNIVERSARY [85]<br>
+                        COORD: 59.9322°N, 30.2981°E
+                    </div>
+                </div>
+
+                <div class="system-resources">
+                    <div>
+                        <div style="display:flex; justify-content:space-between">
+                            <span>VRAM (GPU 0)</span><span id="vram-text">42%</span>
+                        </div>
+                        <div class="resource-bar-container"><div class="resource-bar" id="bar-vram" style="width: 42%;"></div></div>
+                    </div>
+                    <div>
+                        <div style="display:flex; justify-content:space-between">
+                            <span>SYS_MEMORY</span><span id="mem-text">68%</span>
+                        </div>
+                        <div class="resource-bar-container"><div class="resource-bar" id="bar-mem" style="width: 68%;"></div></div>
+                    </div>
+                    <div>
+                        <div style="display:flex; justify-content:space-between">
+                            <span>CPU_LOAD</span><span id="cpu-text">89%</span>
+                        </div>
+                        <div class="resource-bar-container"><div class="resource-bar" id="bar-cpu" style="background:#ff3333; width: 89%;"></div></div>
+                    </div>
+                    <div style="margin-top: 10px; font-size:0.8rem; opacity:0.6;" id="hex-dump">
+                        0x00A1 FF FF E2 4C<br>
+                        0x00B2 41 8C 00 AA
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Подвал -->
+        <div class="footer-panel">
+            <div class="active-process">> ACTIVE_PROCESS: <span id="bottom-process">idle</span></div>
+            <div>NET_LATENCY: 14ms</div>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        // --- ЧАСТЬ 1: ТЕРМИНАЛ И ПАНЕЛИ ---
+        const terminalLogs = document.getElementById('logs');
+        const mainUI = document.getElementById('main-ui');
+        const bottomProcess = document.getElementById('bottom-process');
+        
+        let hexTimer;
+        
+        const sequence = [
+            { text: "ESTABLISHING SECURE PROTOCOL SPUTNIK-2...", delay: 20 },
+            { text: "Handshake verified. Decrypting data streams.", class: "sys-ok", delay: 20 },
+            { text: "root@sputnik2:~# auth --verify UG-1 --key ********", delay: 50 },
+            { text: "Checking permissions...", delay: 50 },
+            { text: "< ACCESS GRANTED. WELCOME, COMMANDER UG-1. >", class: "sys-ok", delay: 100 },
+            { text: "root@sputnik2:~# load_mission --id 'GUAP_85_ANNIVERSARY'", delay: 50 },
+            { text: "Locating package bounds... MATCH FOUND.", delay: 30 },
+            { text: "Extracting [congratulation_protocol.bin]...", delay: 30 },
+            { text: "[█████               ] 25%", delay: 10 },
+            { text: "[██████████          ] 50%", delay: 10 },
+            { text: "[███████████████     ] 75%", delay: 10 },
+            { text: "[████████████████████] 100%", class: "sys-ok", delay: 30 },
+            { text: "root@sputnik2:~# unpack_symbol --hex 0x042F", delay: 100 },
+            { text: "[ERROR] SYSTEM SECURED. ACCESS TO CORE LAYER PROHIBITED.", class: "sys-warn", delay: 150 },
+            { text: "root@sputnik2:~# force_bypass -r -t 0s", delay: 80 },
+            { text: "OVERRIDING MAINFRAME FIREWALL...", class: "sys-hack", delay: 150 },
+            { text: "WARNING: UNAUTHORIZED INTERFACE BREACH IN PROGRESS!", class: "sys-warn", delay: 250 },
+            { text: "Brute_force module engaged... 0x1A2B... 0x4FFF...", delay: 80 },
+            { text: "< HACK SUCCESSFUL. FIREWALL DISABLED. >", class: "sys-ok", delay: 150 },
+            { text: "COMPILING TARGET VECTOR [CYRILLIC_YA]...", delay: 80 },
+            { text: "> ИНИЦИАЛИЗАЦИЯ И СБОРКА БУКВЫ 'Я' ПРОИЗВЕДЕНА.", class: "sys-hack", delay: 800 }
+        ];
+
+        let seqIndex = 0;
+        let charIndex = 0;
+        let pElement = null;
+
+        function updateResources() {
+            if (seqIndex >= sequence.length) return;
+            // Делаем медленные и плавные изменения (убираем жуткое дребезжание)
+            const cpu = Math.floor(Math.random() * 8 + 80); 
+            const ram = Math.floor(Math.random() * 4 + 65);
+            const vram = Math.floor(Math.random() * 4 + 40);
+            document.getElementById('cpu-text').innerText = cpu + '%';
+            document.getElementById('mem-text').innerText = ram + '%';
+            document.getElementById('vram-text').innerText = vram + '%';
+            document.getElementById('bar-cpu').style.width = cpu + '%';
+            document.getElementById('bar-mem').style.width = ram + '%';
+            document.getElementById('bar-vram').style.width = vram + '%';
+            
+            document.getElementById('hex-dump').innerHTML = 
+                `0x${(Math.random()*0xFFFF|0).toString(16).toUpperCase()} ${(Math.random()*0xFF|0).toString(16).toUpperCase()} ${(Math.random()*0xFF|0).toString(16).toUpperCase()} <br>` +
+                `0x${(Math.random()*0xFFFF|0).toString(16).toUpperCase()} ${(Math.random()*0xFF|0).toString(16).toUpperCase()} ${(Math.random()*0xFF|0).toString(16).toUpperCase()}`;
+
+            // Замедлили скорость обновления индикаторов раз в полторы секунды
+            hexTimer = setTimeout(updateResources, 1500);
+        }
+        updateResources();
+
+        function typeLine() {
+            if (seqIndex < sequence.length) {
+                let currentItem = sequence[seqIndex];
+                
+                if (charIndex === 0) {
+                    pElement = document.createElement('div');
+                    pElement.className = 'log-line';
+                    if (currentItem.class) pElement.classList.add(currentItem.class);
+                    terminalLogs.appendChild(pElement);
+                    bottomProcess.innerText = "running: " + currentItem.text.substring(0, 15) + "...";
+                }
+
+                pElement.innerHTML = currentItem.text.substring(0, charIndex + 1) + '<span class="cursor"></span>';
+                charIndex++;
+                terminalLogs.scrollTop = terminalLogs.scrollHeight;
+
+                // ОЧЕНЬ БЫСТРАЯ ПЕЧАТЬ (задержка 1-10 мс)
+                let typeDelay = Math.random() * 8 + 1; 
+                
+                if (charIndex === currentItem.text.length) {
+                    pElement.innerHTML = currentItem.text;
+                    seqIndex++;
+                    charIndex = 0;
+                    setTimeout(typeLine, currentItem.delay || 50);
+                } else {
+                    setTimeout(typeLine, typeDelay);
+                }
+            } else {
+                bottomProcess.innerText = "INITIALIZATION_COMPLETE";
+                clearTimeout(hexTimer);
+                setTimeout(() => {
+                    mainUI.classList.add('glitch-out');
+                    // Показываем флот спутников и ракет на фоне
+                    document.getElementById('space-bg').classList.add('show-fleet');
+                    startParticles();
+                }, 500);
+            }
+        }
+        setTimeout(typeLine, 800);
+
+
+        // --- ЧАСТЬ 2: АНИМАЦИЯ БУКВЫ ---
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        let width, height, particles = [], targetPoints = [], isAnimating = false;
+        const COLOR = '#ffaa00', GLOW_COLOR = 'rgba(255, 140, 0, 0.8)';
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function getShapePoints() {
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+            tempCanvas.width = width; tempCanvas.height = height;
+
+            let fontSize = Math.min(width, height) * 0.85;
+            tempCtx.fillStyle = '#fff';
+            tempCtx.font = `bold ${fontSize}px sans-serif`;
+            tempCtx.textAlign = 'center'; tempCtx.textBaseline = 'middle';
+            tempCtx.fillText('Я', width / 2, height / 2);
+
+            const imageData = tempCtx.getImageData(0, 0, width, height).data;
+            const points = [];
+            // Увеличиваем шаг между частицами (меньше частиц = меньше лагов)
+            const gap = width < 800 ? 8 : 12; 
+
+            for (let y = 0; y < height; y += gap) {
+                for (let x = 0; x < width; x += gap) {
+                    const idx = (y * width + x) * 4;
+                    if (imageData[idx + 3] > 128) points.push({ x: x, y: y });
+                }
+            }
+            return points;
+        }
+
+        // ОПТИМИЗАЦИЯ: пред-рендеринг частицы один раз на скрытом холсте
+        const pCanvas = document.createElement('canvas');
+        pCanvas.width = 20; pCanvas.height = 20;
+        const pCtx = pCanvas.getContext('2d');
+        pCtx.beginPath();
+        pCtx.arc(10, 10, 2, 0, Math.PI * 2);
+        pCtx.fillStyle = '#ffaa00';
+        pCtx.shadowBlur = 8;
+        pCtx.shadowColor = 'rgba(255, 140, 0, 0.9)';
+        pCtx.fill();
+
+        class Particle {
+            constructor(targetX, targetY) {
+                this.targetX = targetX; this.targetY = targetY;
+                this.x = width / 2 + (Math.random() - 0.5) * 50; 
+                this.y = height / 2 + (Math.random() - 0.5) * 50;
+                this.vx = (Math.random() - 0.5) * 40; this.vy = (Math.random() - 0.5) * 40;
+                this.friction = Math.random() * 0.04 + 0.88; 
+                this.ease = Math.random() * 0.05 + 0.015;
+                this.glitchTimer = Math.random() * 50;
+            }
+            update() {
+                let dx = this.targetX - this.x, dy = this.targetY - this.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                this.vx += dx * this.ease; this.vy += dy * this.ease;
+                this.vx *= this.friction; this.vy *= this.friction;
+                this.x += this.vx; this.y += this.vy;
+
+                this.glitchTimer--;
+                if (this.glitchTimer < 0 && dist < 30) {
+                    this.x += (Math.random() - 0.5) * 12; this.y += (Math.random() - 0.5) * 12;
+                    this.glitchTimer = Math.random() * 80 + 10;
+                }
+            }
+            draw() {
+                // Применяем готовую картинку вместо тяжелых перерисовок с тенью:
+                ctx.drawImage(pCanvas, this.x - 10, this.y - 10);
+            }
+        }
+
+        function startParticles() {
+            canvas.style.opacity = '1';
+            targetPoints = getShapePoints(); particles = [];
+            targetPoints.forEach(p => particles.push(new Particle(p.x, p.y)));
+            isAnimating = true; animateParticles();
+        }
+
+        function animateParticles() {
+            ctx.fillStyle = 'rgba(2, 1, 1, 0.3)'; ctx.fillRect(0, 0, width, height);
+
+            if (Math.random() > 0.95) {
+                ctx.fillStyle = 'rgba(255, 140, 0, 0.06)';
+                ctx.fillRect(Math.random() * width, Math.random() * height, Math.random() * 200, Math.random() * 10);
+            }
+
+            particles.forEach(p => { p.update(); p.draw(); });
+            if (isAnimating) requestAnimationFrame(animateParticles);
+        }
+    </script>
+</body>
+</html>
